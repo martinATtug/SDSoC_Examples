@@ -13,7 +13,7 @@
     ],
     "revision" : [
         {
-            "date" : "MAR2017",
+            "date" : "JUNE2017",
             "version": "1.0",
             "description": "Initial Xilinx Release"
         }
@@ -33,6 +33,9 @@
     "os" : [
             "linux",
             "standalone"
+    ],
+    "runtime" : [
+            "C/C++"
     ],
     "source_dir" : "src/*.cpp",
     "pass_string" : "TEST PASSED",

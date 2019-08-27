@@ -1,35 +1,31 @@
-/*********** 
-# Copyright (c) 2017, Xilinx, Inc. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without 
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED.
-#
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY 
-# DIRECT, INDIRECT,INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO,PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-# 
-# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-# LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
-# OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-************/
+/**********
+Copyright (c) 2018, Xilinx, Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********/
 
 /*******************************************************************************
 
@@ -86,13 +82,15 @@ void fir_shift_register_accel(int *signal,
     // ports available to the array.
     int shift_reg[N_COEFF];
     #pragma HLS ARRAY_PARTITION variable=shift_reg complete dim=0
+    #pragma HLS ARRAY_PARTITION variable=coeff_reg complete dim=0
 
     init_loop:
     for (int i = 0; i < N_COEFF; i++) {
+    #pragma HLS PIPELINE
         shift_reg[i] = 0;
         coeff_reg[i] = coeff[i];
     }
-
+ 
     outer_loop:
     for(int j = 0; j < signal_length; j++) {
     #pragma HLS PIPELINE
@@ -105,15 +103,14 @@ void fir_shift_register_accel(int *signal,
         // attribute because the outer loop will be pipelined so
         // the compiler will unroll this loop in the process.
         shift_loop:
-        for (int i = N_COEFF-1; i >= 0; i--) {
-            if (i == 0) {
-                acc += x * coeff_reg[0];
-                shift_reg[0] = x;
-            } else {
-                shift_reg[i] = shift_reg[i-1];
-                acc += shift_reg[i] * coeff_reg[i];
-            }
+        for (int i = N_COEFF-1; i > 0; i--) {
+            shift_reg[i] = shift_reg[i-1];
+            acc += shift_reg[i] * coeff_reg[i];
         }
+
+        acc += x * coeff_reg[0];
+        shift_reg[0] = x;
+
         hw_out[j] = acc;
     }
 }

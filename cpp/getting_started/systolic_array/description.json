@@ -14,7 +14,7 @@
     ],
     "revision" : [
         {
-            "date" : "MAR2017",
+            "date" : "JUNE2017",
             "version": "1.0",
             "description": "Initial Xilinx Release"
         }
@@ -31,11 +31,14 @@
     "libs": [
             "sds_utils"
     ],
-    "source_dir" : "src/*.cpp",
     "os" : [
             "linux",
             "standalone"
     ],
+    "runtime" : [
+            "C/C++"
+    ],
+    "source_dir" : "src/*.cpp",
     "pass_string" : "TEST PASSED",
     "fail_string" : "TEST FAILED" 
 }

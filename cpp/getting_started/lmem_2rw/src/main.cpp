@@ -1,35 +1,31 @@
-/*********** 
-# Copyright (c) 2017, Xilinx, Inc. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without 
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED.
-#
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY 
-# DIRECT, INDIRECT,INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO,PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-# 
-# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-# LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
-# OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-************/
+/**********
+Copyright (c) 2018, Xilinx, Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********/
 
 /*******************************************************************************
 
@@ -41,73 +37,96 @@
 #include <cstring>
 #include <cstdlib>
 #include "vadd.h"
+#include "sds_utils.h"
+
+#ifndef NUM_TIMES
+#define NUM_TIMES 2  
+#endif
 
 // Software Solution
-void vadd_sw(unsigned int *source_in1, unsigned int *source_in2, unsigned int *out, 
+void vadd_sw(int *in1, int *in2, int *out, 
             int size)
 {
-	for(int i = 0; i < size; i++){
-		out[i] = source_in1[i] + source_in2[i];
-	}
+    for(int i = 0; i < size; i++){
+        out[i] = in1[i] + in2[i];
+    }
 }
 
 int main(int argc, char** argv)
 {
     // Size of input data
-    size_t vector_size_bytes = sizeof(unsigned int) * DATA_SIZE;
+    size_t vector_size_bytes = sizeof(int) * DATA_SIZE;
 
-    // Allocate PL buffers using sds_alloc
-    unsigned int *source_in1         = (unsigned int *) sds_alloc(vector_size_bytes);
-    unsigned int *source_in2         = (unsigned int *) sds_alloc(vector_size_bytes);
-    unsigned int *source_hw_results  = (unsigned int *) sds_alloc(vector_size_bytes);
+    // Allocate buffers using sds_alloc
+    int *in1         = (int *) sds_alloc(vector_size_bytes);
+    int *in2         = (int *) sds_alloc(vector_size_bytes);
+    int *hw_results  = (int *) sds_alloc(vector_size_bytes);
 
     // Allocate software output buffer
-    unsigned int *source_sw_results  = (unsigned int *) malloc(vector_size_bytes);
+    int *sw_results  = (int *) malloc(vector_size_bytes);
 
-    // Create the test data 
-    for(int i = 0 ; i < DATA_SIZE ; i++){
-        source_in1[i] = i;
-        source_in2[i] = i * i;
-        source_sw_results[i] = 0; 
-        source_hw_results[i] = 0;
+    if((in1 == NULL) || (in2 == NULL) || (hw_results == NULL) 
+            || (sw_results == NULL)){
+        std::cout << "TEST FAILED : Failed to allocate memory" << std::endl;
+        return -1;
     }
 
     sds_utils::perf_counter hw_ctr, sw_ctr;
 
     int size = DATA_SIZE;
+    bool match = true;
 
-    //Launch the Software Solution
-    vadd_sw(source_in1,source_in2,source_sw_results, size);
+    for (int i = 0; i < NUM_TIMES ; i++)
+    {
+        // Create the test data 
+        for(int i = 0 ; i < DATA_SIZE ; i++){
+            in1[i] = i;
+            in2[i] = i * i;
+            sw_results[i] = 0; 
+            hw_results[i] = 0;
+        }
 
-    hw_ctr.start();
-    //Launch the Hardware Solution
-    vadd_accel(source_in1,source_in2, source_hw_results,size);
-    hw_ctr.stop();
+        sw_ctr.start();
+        //Launch the Software Solution
+        vadd_sw(in1,in2,sw_results, size);
+        sw_ctr.stop();
 
-    uint64_t hw_cycles = hw_ctr.avg_cpu_cycles();
+        hw_ctr.start();
+        //Launch the Hardware Solution
+        vadd_accel(in1,in2, hw_results,size);
+        hw_ctr.stop();
 
-    std::cout << "Average number of CPU cycles running mmult in hardware: "
-				 << hw_cycles << std::endl;
-    
-    // Compare the results between PL and Simulation
-    int match = 0;
-    for (int i = 0 ; i < DATA_SIZE ; i++){
-        if (source_hw_results[i] != source_sw_results[i]){
-            std::cout << "Error: Result mismatch" << std::endl;
-            std::cout << "i = " << i << " CPU result = " << source_sw_results[i]
-                << " Device result = " << source_hw_results[i] << std::endl;
-            match = 1;
-            break;
+        // Compare the results between PL and Simulation
+        for (int i = 0 ; i < DATA_SIZE ; i++){
+            if (hw_results[i] != sw_results[i]){
+                std::cout << "Error: Result mismatch" << std::endl;
+                std::cout << "i = " << i << " CPU result = " << sw_results[i]
+                        << " Hardware result = " << hw_results[i] << std::endl;
+                match = false;
+                break;
+            }
         }
     }
 
-    // Release Memory
-    sds_free(source_in1);
-    sds_free(source_in2);
-    sds_free(source_hw_results);
-    free(source_sw_results);
+    uint64_t sw_cycles = sw_ctr.avg_cpu_cycles();
+    uint64_t hw_cycles = hw_ctr.avg_cpu_cycles();
 
-    if (match){
+    double speedup = (double) sw_cycles / (double) hw_cycles;
+
+    std::cout << "Number of CPU cycles running application in software: "
+                << sw_cycles << std::endl;
+    std::cout << "Number of CPU cycles running application in hardware: "
+                << hw_cycles << std::endl;
+    std::cout << "Speedup: " << speedup << std::endl;
+    std::cout << "Note: Speed up is meaningful for real hardware execution only, not for emulation." << std::endl;
+    
+    // Release Memory
+    sds_free(in1);
+    sds_free(in2);
+    sds_free(hw_results);
+    free(sw_results);
+
+    if (!match){
         std::cout << "TEST FAILED" << std::endl;
         return 1;
     }

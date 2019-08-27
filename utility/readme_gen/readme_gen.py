@@ -4,13 +4,11 @@ import json
 import os
 import subprocess
 
-DSA = 'zc706'
-VERSION = '2016.4'
+DSA = 'zcu102'
 DEVICES = {
-    'zc702':['zynq','xc7z020','Emulation/Hardware','linux/standalone'],
-    'zc706':['zynq','xc7z045','Emulation/Hardware','linux/standalone'],
-    'zcu102':['zynquplus','xczu9eg','Emulation/Hardware','linux/standalone'],
-    'zcu102_es2':['zynquplus','xczu9eg','Hardware','linux/standalone']
+    'zc702':['zynq','xc7z020','Emulation/Hardware'],
+    'zc706':['zynq','xc7z045','Emulation/Hardware'],
+    'zcu102':['zynquplus','xczu9eg','Emulation/Hardware'],
     }
 
 def header(target,data):
@@ -25,8 +23,7 @@ def header(target,data):
     target.write("5. COMPILATION AND EXECUTION\n")
     target.write("6. SUPPORT\n")
     target.write("7. LICENSE AND CONTRIBUTING TO THE REPOSITORY\n")
-    target.write("8. ACKNOWLEDGEMENTS\n")
-    target.write("9. REVISION HISTORY\n\n\n")
+    target.write("8. ACKNOWLEDGEMENTS\n\n\n")
     return
 
 def download(target):
@@ -86,7 +83,7 @@ def requirements(target,data):
     
     boards = [word for word in DEVICES if word not in nboard]
 
-    target.write("## 3. SOFTWARE AND SYSTEM REQUIREMENTS\n")
+    target.write("## 3. SOFTWARE AND SYSTEM REQUIREMENTS\n") 
     target.write("Board | Family | Part | Flow | OS \n")
     target.write("------|-------------|----------|----------|----------\n")
 
@@ -99,7 +96,10 @@ def requirements(target,data):
         target.write("|")
         target.write(DEVICES[board][2])
         target.write("|")
-        target.write(DEVICES[board][3])
+        for i in data["os"]:
+	    if(i != data["os"][0]):
+                target.write("/")
+            target.write(i)
         target.write("|")
         target.write("\n")
     target.write("\n\n")
@@ -108,7 +108,8 @@ def requirements(target,data):
     target.write("```\n")
     target.write("make check PLATFORM=<board name> or make all PLATFORM=<board name>\n")
     target.write("```\n")
-    target.write("where the *PLATFORM* variable accepts one device.\n\n")
+    target.write("where the *PLATFORM* variable accepts one board.\n\n")
+    target.write("*NOTE:* The Makefiles provided by the examples do not run on Windows, but the source files could be used in the SDSoC environment GUI under Windows\n\n")
     try:
       if data['opencv']:
                 target.write("***OpenCV for Example Applications***\n\n")
@@ -138,6 +139,12 @@ def compilation(target,data):
     target.write("### Compiling for Application Emulation\n")
     target.write("As part of capabilities available to an application developer, SDSoC includes emulation environment to check the functional and design compatibility with selected hardware platform.\n")
     target.write("SDSoC emulation mode is named as \"emu\" , this mode allows developer to profile and evaluate the performance of a design before compiling for board deployment. It is highly recommended that all the applications are executed in emulation flow.\n")
+    target.write("\n\n")
+    target.write("Platform | Supported Flow \n")
+    target.write("------|-------------\n")
+    target.write("Linux|Makefile/GUI|\n")
+    target.write("Windows|GUI|\n")
+    target.write("\n\n")
     target.write("```\n")
     target.write("make all TARGET=emu\n")
     target.write("```\n")
@@ -152,6 +159,12 @@ def compilation(target,data):
     target.write("make check TARGET=emu\n")
     target.write("```\n")
     target.write("If the application has not been previously compiled, the check makefile rule will compile and execute the application in the emulation mode selected by the user.\n\n")
+    target.write("### Compiling for Quick CPU Emulation\n")
+    target.write("This mode allows quick functionality check of the application code by treating all hardware functions as CPU functions and then going through the usual emulation flow.\n")
+    target.write("```\n")    
+    target.write("make check TARGET=cpu_emu\n")
+    target.write("```\n")
+    target.write("*NOTE:* This is the quickest mode and is used only to verify the functional correctness of the application code. \n\n")
     target.write("### Compiling for Application Execution in the FPGA Accelerator Card\n")
     target.write("The command to deploy hardware function on programmable logic (PL)\n")
     target.write("```\n")
@@ -184,20 +197,7 @@ def ack(target,data):
         target.write("](")
         target.write(contributor["url"])
         target.write(")\n")
-    return
-
-def revision(target,data):
-    target.write("\n## 9. REVISION HISTORY\n")
-    target.write("Date | README Version | Description\n")
-    target.write("-----|----------------|------------\n")
-    for rev in data["revision"]:
-        target.write(rev["date"])
-        target.write("|")
-        target.write(rev["version"])
-        target.write("|")
-        target.write(rev["description"])
-        target.write("\n")
-    target.write("\n")
+    target.write("\n\n")
     return
 
 def dirTraversal(stop_file):
@@ -222,7 +222,7 @@ def footer(target):
     root = relativeTree(relativeLevels)
     target.write("[3-Clause BSD License]: " + root + "LICENSE.txt\n")
     target.write("[SDSoC Forums]: https://forums.xilinx.com/t5/SDSoC-Development-Environment/bd-p/sdsoc\n")
-    target.write("[SDSoC User Guides]: https://www.xilinx.com/support/documentation/sw_manuals/xilinx2016_4/ug1027-sdsoc-user-guide.pdf\n")
+    target.write("[SDSoC User Guides]: https://www.xilinx.com/support/documentation/sw_manuals/xilinx2017_2/ug1027-sdsoc-user-guide.pdf\n")
     target.write("[Repository Contribution README]: " + root + "CONTRIBUTING.md\n")
     return
 
@@ -250,6 +250,5 @@ compilation(target,data)
 support(target)
 license(target)
 ack(target,data)
-revision(target,data)
 footer(target)
 target.close
